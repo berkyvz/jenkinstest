@@ -1,0 +1,85 @@
+plugins {
+	id 'org.springframework.boot' version '2.1.5.RELEASE'
+	id 'java'
+	id 'com.google.cloud.tools.jib' version '1.2.0'
+	id 'jacoco'
+	id "org.sonarqube" version "2.7.1"
+}
+
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'org.sonarqube'
+
+
+group = 'com.eteration'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testCompile("org.springframework.boot:spring-boot-starter-test")
+	
+	
+	compile group: 'org.springframework.boot', name: 'spring-boot-starter-thymeleaf', version: '2.0.0.RELEASE'
+    compile("org.springframework.boot:spring-boot-devtools")
+    
+    //SELENIUM
+    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '2.41.0'
+    
+    //CUCUMBER
+    testImplementation 'io.cucumber:cucumber-java:4.3.1'
+}
+
+
+jib.container.useCurrentTimestamp = true
+
+sonarqube {
+	properties {
+		property "sonar.sourceEncoding", "UTF-8"
+		property "sonar.login","1234810a1677def7d7a6e55b5e06a18fa9732d45"
+		property "sonar.host.url","https://sonar.eteration.com"
+		property "sonar.projectName","berk-demo"
+		property "sonar.jacoco.reportPaths", "${buildDir}/jacoco/test.exec"
+
+   }
+}
+
+jacoco {
+    toolVersion = "0.8.3"
+    reportsDir = file("${buildDir}/reports")
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.destination file("${reportsDir}/jacoco-report")
+    }
+}
+
+
+
+configurations {
+    cucumberRuntime {
+        extendsFrom testImplementation
+    }	
+
+}
+
+task cucumber() {
+	group "Cucumber"
+	description "This is cucumber task"
+    dependsOn assemble, compileTestJava
+    doLast {
+        javaexec {
+            main = "cucumber.api.cli.Main"
+            classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
+            args = ['--plugin', 'pretty', '--glue', 'com.eteration.simpleapp', 'src/test/resources']
+        }
+    }
+}
